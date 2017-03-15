@@ -483,33 +483,43 @@ cdef class Model: # {{{
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array):
+    cpdef parameters_from_numpy(self, array, maintain_average=False):
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None):
+    cpdef add_parameters(self, dim, PyInitializer init=None, maintain_average=False):
         assert(isinstance(dim,(tuple,int)))
         cdef CParameters p
         cdef CParameterInit *initializer
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer))
+        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, maintain_average=False):
         assert(isinstance(dim, tuple))
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), maintain_average)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
+
+    cpdef get_average_parameters(self, Parameters p):
+        cdef CParameters avg_p = self.thisptr.get_average_parameters(p.thisptr)
+        cdef Parameters avg_pp = Parameters.wrap_ptr(avg_p)
+        return avg_pp
+
+    cpdef get_average_lookup_parameters(self, LookupParameters p):
+        cdef CLookupParameters avg_p = self.thisptr.get_average_lookup_parameters(p.thisptr)
+        cdef LookupParameters avg_pp = LookupParameters.wrap_ptr(avg_p)
+        return avg_pp
 
     def save_all(self, string fname):
         save_dynet_model(fname, self.thisptr)
@@ -2017,8 +2027,8 @@ cdef class StackedRNNState:
 # {{{ Training 
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay, emadecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -2047,8 +2057,8 @@ cdef class SimpleSGDTrainer:
 
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
+    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay, emadecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -2078,8 +2088,8 @@ cdef class MomentumSGDTrainer:
 
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
+    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay, emadecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -2109,8 +2119,8 @@ cdef class AdagradTrainer:
 
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay, emadecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -2140,8 +2150,8 @@ cdef class AdadeltaTrainer:
 
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay, emadecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
