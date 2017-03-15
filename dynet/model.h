@@ -8,6 +8,7 @@
 #define DYNET_PARAMS_H_
 
 #include <vector>
+#include <unordered_map>
 #include <set>
 #include <unordered_set>
 #include <string>
@@ -554,7 +555,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, float scale = 0.0f);
+  Parameter add_parameters(const Dim& d, float scale = 0.0f, bool maintain_average = false);
   /**
    * \brief Add parameters with custom initializer
    *
@@ -563,7 +564,7 @@ public:
    *
    * \return Parameter object to be used in the computation graph
    */
-  Parameter add_parameters(const Dim& d, const ParameterInit & init);
+  Parameter add_parameters(const Dim& d, const ParameterInit & init, bool maintain_average = false);
   /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
@@ -573,7 +574,7 @@ public:
    *
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, bool maintain_average = false);
   /**
    * \brief Add lookup parameter with custom initializer
    *
@@ -582,7 +583,7 @@ public:
    * \param init Custom initializer
    * \return LookupParameter object to be used in the computation graph
    */
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, bool maintain_average = false);
   //
   /**
    * \brief project weights so their L2 norm = radius
@@ -625,6 +626,34 @@ public:
    * \return list of indices of updated lookup params
    */
   const std::vector<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
+
+  /**
+   * \brief Returns a map that maps index of parameter to index of its corresponding average parameter
+   *
+   * \return A map that maps index of parameter to index of its corresponding average parameter
+   */
+  const std::unordered_map<unsigned, unsigned>& average_parameters_map() const { return average_params_index; }
+  /**
+   * \brief Returns a map that maps index of lookup parameter to index of its corresponding average lookup parameter
+   *
+   * \return A map that maps index of lookup parameter to index of its corresponding average lookup parameter
+   */
+  const std::unordered_map<unsigned, unsigned>& average_lookup_parameters_map() const { return average_lookup_params_index; }
+
+  /**
+   * \brief Get a parameter's corresponding average parameter
+   *
+   * \param p A parameter
+   * \return The corresponding average parameter of a parameter
+   */
+  Parameter get_average_parameters(const Parameter& p);
+  /**
+   * \brief Get a lookup parameter's corresponding average lookup parameter
+   *
+   * \param p A lookup parameter
+   * \return The corresponding lookup average parameter of a lookup parameter
+   */
+  LookupParameter get_average_lookup_parameters(const LookupParameter& p);
 
   //
   //
@@ -680,6 +709,10 @@ private:
   std::vector<ParameterStorageBase*> all_params;
   std::vector<ParameterStorage*> params;
   std::vector<LookupParameterStorage*> lookup_params;
+
+  // map a param/lookup_param to its corresponding average_param/average_lookup_param
+  std::unordered_map<unsigned, unsigned> average_params_index;
+  std::unordered_map<unsigned, unsigned> average_lookup_params_index;
 
   // these are a subset of the parameters that are used when model is updated.
   // kept as indices into params and lookup_params.

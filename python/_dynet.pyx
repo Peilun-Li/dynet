@@ -591,21 +591,22 @@ cdef class Model: # (((
     # TODO: for debug, remove
     cpdef pl(self): return self.thisptr.parameters_list().size()
 
-    cpdef parameters_from_numpy(self, array):
+    cpdef parameters_from_numpy(self, array, maintain_average=False):
         """Create parameter from numpy array
         
         Args:
             array (np.ndarray): Numpy array
+            maintain_average (boolean):whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer))
+        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None):
+    cpdef add_parameters(self, dim, PyInitializer init=None, maintain_average=False):
         """Add a parameter to the model
         
         Args:
@@ -613,6 +614,7 @@ cdef class Model: # (((
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            maintain_average (boolean):whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -623,11 +625,11 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer()
         initializer = init.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer))
+        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), maintain_average)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, maintain_average=False):
         """Add a lookup parameter to the model
         
         Args:
@@ -635,6 +637,7 @@ cdef class Model: # (((
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            maintain_average (boolean):whether to maintain average lookup parameters
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
@@ -645,9 +648,19 @@ cdef class Model: # (((
         if init is None:
             init = GlorotInitializer(True)
         initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), maintain_average)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
+
+    cpdef get_average_parameters(self, Parameters p):
+        cdef CParameters avg_p = self.thisptr.get_average_parameters(p.thisptr)
+        cdef Parameters avg_pp = Parameters.wrap_ptr(avg_p)
+        return avg_pp
+
+    cpdef get_average_lookup_parameters(self, LookupParameters p):
+        cdef CLookupParameters avg_p = self.thisptr.get_average_lookup_parameters(p.thisptr)
+        cdef LookupParameters avg_pp = LookupParameters.wrap_ptr(avg_p)
+        return avg_pp
 
     def save_all(self, fname):
         """Save all parameters in model to file
@@ -2286,7 +2299,6 @@ cdef class Trainer:
         self.thisptr.status()
     cpdef set_sparse_updates(self,bool su):
         """Sets updates to sparse updates
-
         DyNet trainers support two types of updates for lookup parameters, sparse and dense. Sparse updates are the default. They have the potential to be faster, as they only touch the parameters that have non-zero gradients. However, they may not always be faster (particulary on GPU with mini-batch training), and are not precisely numerically correct for some update rules such as MomentumTrainer and AdamTrainer. Thus, if you set this variable to false, the trainer will perform dense updates and be precisely correct, and maybe faster sometimes.
         Args:
             su(bool): flag to activate/deactivate sparse updates
@@ -2326,8 +2338,8 @@ cdef class SimpleSGDTrainer(Trainer):
         e0(number): Initial learning rate (default: 0.1)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
+    def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay, emadecay)
     def whoami(self):
         return "SimpleSGDTrainer"
 
@@ -2340,13 +2352,19 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
+<<<<<<< HEAD
         e0(number): Initial learning rate (default: 0.1)
         mom(number): Momentum (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
 
+=======
+        e0(number): Initial learning rate (default: (0.1))
+        mom(number): Momentum (default: (0.9))
+        edecay(number): Learning rate decay parameter (default: (0.0))
+>>>>>>> add support for average parameter
     """
-    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
+    def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay, emadecay)
     def whoami(self):
         return "MomentumSGDTrainer"
 
@@ -2364,8 +2382,8 @@ cdef class AdagradTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-20)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
+    def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay, emadecay)
     def whoami(self):
         return "AdagradTrainer"
 
@@ -2383,8 +2401,8 @@ cdef class AdadeltaTrainer(Trainer):
         rho(number): Update parameter for the moving average of updates in the numerator (default: 0.95)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
+    def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay, emadecay)
     def whoami(self):
         return "AdadeltaTrainer"
 
@@ -2402,8 +2420,8 @@ cdef class RMSPropTrainer(Trainer):
         rho(number): Update parameter for the moving average (`rho = 0` is equivalent to using Adagrad) (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0):
-        self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay)
+    def __cinit__(self, Model m, float e0 = 0.001,float eps = 1e-8, float rho = 0.9, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CRMSPropTrainer(m.thisptr[0], e0, eps, rho, edecay, emadecay)
     def whoami(self):
         return "RMSPropTrainer"
 
@@ -2422,8 +2440,8 @@ cdef class AdamTrainer(Trainer):
         eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
         edecay(number): Learning rate decay parameter (default: 0.0)
     """
-    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
+    def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8, float edecay = 0.0, float emadecay = 0.9999):
+        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay, emadecay)
     def whoami(self):
         return "AdamTrainer"
 

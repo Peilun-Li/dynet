@@ -309,44 +309,86 @@ void Model::project_weights(float radius) {
   cerr << "NORM: " << sqrt(gg) << endl;
 }
 
-Parameter Model::add_parameters(const Dim& d, float scale) {
+Parameter Model::add_parameters(const Dim& d, float scale, bool maintain_average) {
   ParameterStorage* p = new ParameterStorage(d, scale);
   Parameter r(this, params.size());
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
   updated_params.push_back(r.index);
+  if (maintain_average) {
+    ParameterStorage* avg_p = new ParameterStorage(d, scale);
+    avg_p->copy(*p);
+    average_params_index[r.index] = params.size();
+    all_params.push_back(avg_p);
+    params.push_back(avg_p);
+  }
   return r;
 }
 
-Parameter Model::add_parameters(const Dim& d, const ParameterInit & init) {
+Parameter Model::add_parameters(const Dim& d, const ParameterInit & init, bool maintain_average) {
   ParameterStorage* p = new ParameterStorage(d, init);
   Parameter r(this, params.size());
   //cerr << "Adding parameters with dim " << d << endl;
   all_params.push_back(p);
   params.push_back(p);
   updated_params.push_back(r.index);
+  if (maintain_average) {
+    ParameterStorage* avg_p = new ParameterStorage(d, init);
+    avg_p->copy(*p);
+    average_params_index[r.index] = params.size();
+    all_params.push_back(avg_p);
+    params.push_back(avg_p);
+  }
   return r;
 }
 
 
-LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d) {
+LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, bool maintain_average) {
   LookupParameterStorage* p = new LookupParameterStorage(n, d);
   LookupParameter r(this, lookup_params.size());
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
   updated_lookup_params.push_back(r.index);
+  if (maintain_average) {
+    LookupParameterStorage* avg_p = new LookupParameterStorage(n, d);
+    avg_p->copy(*p);
+    average_lookup_params_index[r.index] = lookup_params.size();
+    all_params.push_back(avg_p);
+    lookup_params.push_back(avg_p);
+  }
   return r;
 }
 
-LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init) {
+LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init, bool maintain_average) {
   LookupParameterStorage* p = new LookupParameterStorage(n, d, init);
   LookupParameter r(this, lookup_params.size());
   //cerr << "Adding lookup parameters with dim " << d << " and size " << n << endl;
   all_params.push_back(p);
   lookup_params.push_back(p);
   updated_lookup_params.push_back(r.index);
+  if (maintain_average) {
+    LookupParameterStorage* avg_p = new LookupParameterStorage(n, d, init);
+    avg_p->copy(*p);
+    average_lookup_params_index[r.index] = lookup_params.size();
+    all_params.push_back(avg_p);
+    lookup_params.push_back(avg_p);
+  }
+  return r;
+}
+
+Parameter Model::get_average_parameters(const Parameter& p) {
+  auto iter = average_params_index.find(p.index);
+  DYNET_ASSERT(iter != average_params_index.end(), "To maintain average parameters, maintain_average should be true when add_parameters");
+  Parameter r(this, iter->second);
+  return r;
+}
+
+LookupParameter Model::get_average_lookup_parameters(const LookupParameter& p) {
+  auto iter = average_lookup_params_index.find(p.index);
+  DYNET_ASSERT(iter != average_lookup_params_index.end(), "To maintain average lookup parameters, maintain_average should be true when add_lookup_parameters");
+  LookupParameter r(this, iter->second);
   return r;
 }
 
