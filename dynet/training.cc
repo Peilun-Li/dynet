@@ -124,7 +124,7 @@ void Trainer::update_average_params(size_t idx) {
   auto iter = model->average_parameters_map().find(idx);
   if(iter != model->average_parameters_map().end()) {
     auto & p = model->parameters_list()[idx];
-    auto & avg_p = model->parameters_list()[iter->second];
+    auto & avg_p = model->average_parameters_list()[iter->second];
     update_average({&p->values, &avg_p->values});
   }
 }
@@ -133,7 +133,7 @@ void Trainer::update_average_lookup_params(size_t idx, size_t lidx) {
   auto iter = model->average_lookup_parameters_map().find(idx);
   if(iter != model->average_lookup_parameters_map().end()) {
     auto & p = model->lookup_parameters_list()[idx];
-    auto & avg_p = model->lookup_parameters_list()[iter->second];
+    auto & avg_p = model->average_lookup_parameters_list()[iter->second];
     update_average({&p->values[lidx], &avg_p->values[lidx]});
   }
 }
@@ -142,7 +142,7 @@ void Trainer::update_average_lookup_params(size_t idx) {
   auto iter = model->average_lookup_parameters_map().find(idx);
   if(iter != model->average_lookup_parameters_map().end()) {
     auto & p = model->lookup_parameters_list()[idx];
-    auto & avg_p = model->lookup_parameters_list()[iter->second];
+    auto & avg_p = model->average_lookup_parameters_list()[iter->second];
     update_average({&p->all_values, &avg_p->all_values});
   }
 }

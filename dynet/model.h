@@ -231,8 +231,9 @@ struct Parameter {
    *
    * @param mp Pointer to th model
    * @param index Id of the parameter
+   * @param is_average_paramsTrue if object is an average parmeter
    */
-  Parameter(Model* mp, unsigned long index);
+  Parameter(Model* mp, unsigned long index, bool is_average_param = false);
   /**
    * @brief Get underlying ParameterStorage object
    * @return ParameterStorage holding the parameter values
@@ -246,6 +247,7 @@ struct Parameter {
 
   Model* mp;/**< Pointer to the Model holding this parameter */
   unsigned long index;/**< Index of this parameter in its Model*/
+  bool is_average_param;/**< True if object is an average parmeter*/
 
   /**
    * \brief Shape of the parameter
@@ -295,7 +297,7 @@ private:
  */
 struct LookupParameter {
   LookupParameter();
-  LookupParameter(Model* mp, unsigned long index);
+  LookupParameter(Model* mp, unsigned long index, bool is_average_param = false);
   /**
    * @brief Get underlying LookupParameterStorage object
    * @return LookupParameterStorage holding the parameter values
@@ -316,6 +318,7 @@ struct LookupParameter {
 
   Model* mp;/**< Pointer to the Model holding this parameter */
   unsigned long index;/**< Index of this parameter in its Model*/
+  bool is_average_param;/**< True if object is an average lookup parmeter*/
 
   /**
    * \brief Shape of the lookup parameter
@@ -628,6 +631,18 @@ public:
   const std::vector<unsigned>& updated_lookup_parameters_list() const { return updated_lookup_params; }
 
   /**
+   * \brief Returns list of pointers to ParameterSorages for average parameters
+   * \details You shouldn't need to use this
+   * \return List of pointers to ParameterSorages for average parameters
+   */
+  const std::vector<ParameterStorage*>& average_parameters_list() const { return average_params; }
+  /**
+   * \brief Returns list of pointers to LookupParameterSorages for average lookup parameters
+   * \details You shouldn't need to use this
+   * \return List of pointers to LookupParameterSorages for average lookup parameters
+   */
+  const std::vector<LookupParameterStorage*>& average_lookup_parameters_list() const { return average_lookup_params; }
+  /**
    * \brief Returns a map that maps index of parameter to index of its corresponding average parameter
    *
    * \return A map that maps index of parameter to index of its corresponding average parameter
@@ -713,6 +728,9 @@ private:
   // map a param/lookup_param to its corresponding average_param/average_lookup_param
   std::unordered_map<unsigned, unsigned> average_params_index;
   std::unordered_map<unsigned, unsigned> average_lookup_params_index;
+  std::vector<ParameterStorageBase*> all_average_params;
+  std::vector<ParameterStorage*> average_params;
+  std::vector<LookupParameterStorage*> average_lookup_params;
 
   // these are a subset of the parameters that are used when model is updated.
   // kept as indices into params and lookup_params.

@@ -163,7 +163,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
         #CTrainer(CModel& m, float lam, float e0)
-        CTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
+        CTrainer(CModel& m, float e0, float edecay, float emadecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
         bool sparse_updates_enabled

@@ -222,10 +222,15 @@ Parameter::Parameter() {
   index = 0;
 }
 
-Parameter::Parameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
+Parameter::Parameter(Model* mp, unsigned long index, bool is_average_param) : mp(mp), index(index), is_average_param(is_average_param) {}
 
 ParameterStorage* Parameter::get() const {
-  return mp->parameters_list()[index];
+  if (is_average_param) {
+    return mp->average_parameters_list()[index];
+  } else {
+    return mp->parameters_list()[index];
+  }
+  
 }
 void Parameter::clip_inplace(float left, float right){
   float my_scale = 1./ mp->weight_decay.current_weight_decay();
@@ -254,10 +259,14 @@ LookupParameter::LookupParameter() {
   index = 0;
 }
 
-LookupParameter::LookupParameter(Model* mp, unsigned long index) : mp(mp), index(index) {}
+LookupParameter::LookupParameter(Model* mp, unsigned long index, bool is_average_param) : mp(mp), index(index), is_average_param(is_average_param) {}
 
 LookupParameterStorage* LookupParameter::get() const {
-  return mp->lookup_parameters_list()[index];
+  if (is_average_param) {
+    return mp->average_lookup_parameters_list()[index];
+  } else {
+    return mp->lookup_parameters_list()[index];
+  }
 }
 
 void LookupParameter::zero() {
@@ -286,6 +295,7 @@ Model::Model() : gradient_norm_scratch(nullptr) {
 
 Model::~Model() {
   for (auto p : all_params) delete p;
+  for (auto p : all_average_params) delete p;
   if (gradient_norm_scratch)
     default_device->mem->free(gradient_norm_scratch);
 }
@@ -319,9 +329,9 @@ Parameter Model::add_parameters(const Dim& d, float scale, bool maintain_average
   if (maintain_average) {
     ParameterStorage* avg_p = new ParameterStorage(d, scale);
     avg_p->copy(*p);
-    average_params_index[r.index] = params.size();
-    all_params.push_back(avg_p);
-    params.push_back(avg_p);
+    average_params_index[r.index] = average_params.size();
+    all_average_params.push_back(avg_p);
+    average_params.push_back(avg_p);
   }
   return r;
 }
@@ -336,9 +346,9 @@ Parameter Model::add_parameters(const Dim& d, const ParameterInit & init, bool m
   if (maintain_average) {
     ParameterStorage* avg_p = new ParameterStorage(d, init);
     avg_p->copy(*p);
-    average_params_index[r.index] = params.size();
-    all_params.push_back(avg_p);
-    params.push_back(avg_p);
+    average_params_index[r.index] = average_params.size();
+    all_average_params.push_back(avg_p);
+    average_params.push_back(avg_p);
   }
   return r;
 }
@@ -354,9 +364,9 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, bool main
   if (maintain_average) {
     LookupParameterStorage* avg_p = new LookupParameterStorage(n, d);
     avg_p->copy(*p);
-    average_lookup_params_index[r.index] = lookup_params.size();
-    all_params.push_back(avg_p);
-    lookup_params.push_back(avg_p);
+    average_lookup_params_index[r.index] = average_lookup_params.size();
+    all_average_params.push_back(avg_p);
+    average_lookup_params.push_back(avg_p);
   }
   return r;
 }
@@ -371,9 +381,9 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const Par
   if (maintain_average) {
     LookupParameterStorage* avg_p = new LookupParameterStorage(n, d, init);
     avg_p->copy(*p);
-    average_lookup_params_index[r.index] = lookup_params.size();
-    all_params.push_back(avg_p);
-    lookup_params.push_back(avg_p);
+    average_lookup_params_index[r.index] = average_lookup_params.size();
+    all_average_params.push_back(avg_p);
+    average_lookup_params.push_back(avg_p);
   }
   return r;
 }
@@ -381,14 +391,14 @@ LookupParameter Model::add_lookup_parameters(unsigned n, const Dim& d, const Par
 Parameter Model::get_average_parameters(const Parameter& p) {
   auto iter = average_params_index.find(p.index);
   DYNET_ASSERT(iter != average_params_index.end(), "To maintain average parameters, maintain_average should be true when add_parameters");
-  Parameter r(this, iter->second);
+  Parameter r(this, iter->second, true);
   return r;
 }
 
 LookupParameter Model::get_average_lookup_parameters(const LookupParameter& p) {
   auto iter = average_lookup_params_index.find(p.index);
   DYNET_ASSERT(iter != average_lookup_params_index.end(), "To maintain average lookup parameters, maintain_average should be true when add_lookup_parameters");
-  LookupParameter r(this, iter->second);
+  LookupParameter r(this, iter->second, true);
   return r;
 }
 
