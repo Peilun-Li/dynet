@@ -596,7 +596,7 @@ cdef class Model: # (((
         
         Args:
             array (np.ndarray): Numpy array
-            maintain_average (boolean):whether to maintain average parameters
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Parameter
@@ -614,7 +614,7 @@ cdef class Model: # (((
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
-            maintain_average (boolean):whether to maintain average parameters
+            maintain_average (boolean): Whether to maintain average parameters
         
         Returns:
             (dynet.Parameters): Created Parameter
@@ -637,7 +637,7 @@ cdef class Model: # (((
         
         Keyword Arguments:
             init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
-            maintain_average (boolean):whether to maintain average lookup parameters
+            maintain_average (boolean): Whether to maintain average lookup parameters
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
@@ -2352,16 +2352,9 @@ cdef class MomentumSGDTrainer(Trainer):
         m(dynet.Model): Model to be trained
     
     Keyword Args:
-<<<<<<< HEAD
         e0(number): Initial learning rate (default: 0.1)
         mom(number): Momentum (default: 0.9)
         edecay(number): Learning rate decay parameter (default: 0.0)
-
-=======
-        e0(number): Initial learning rate (default: (0.1))
-        mom(number): Momentum (default: (0.9))
-        edecay(number): Learning rate decay parameter (default: (0.0))
->>>>>>> add support for average parameter
     """
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0, float emadecay = 0.9999):
         self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay, emadecay)
